@@ -25,6 +25,7 @@ local debug = ui.new_checkbox("LUA", "B", "Debug")
 local debug_shape = ui.new_combobox("LUA", "B", "Debug Shape", {"Circle", "Square"})
 local points = ui.new_slider("LUA", "B", "Points", 1, 3, 1, true)
 local draw_all_logged_positions = ui.new_checkbox("LUA", "B", "Draw All Logged Positions")
+local flush_on_round_end = ui.new_checkbox("LUA", "B", "Flush On Round End")
 local flush_log = ui.new_button("LUA", "B", "Flush Log", function()
     routes = {}
     writefile("routes.json", json.stringify(routes))
@@ -34,7 +35,12 @@ ui.set_visible(route_interpolation, false)
 ui.set_visible(interpolation_scale, false)
 ui.set_visible(interphelp, false)
 ui.set_visible(interphelp2, false)
-
+ui.set_visible(debug, false)
+ui.set_visible(debug_shape, false)
+ui.set_visible(points, false)
+ui.set_visible(draw_all_logged_positions, false)
+ui.set_visible(flush_on_round_end, false)
+ui.set_visible(flush_log, false)
 
 local function draw_circle_3d(x, y, z, radius, r, g, b, a, accuracy, width, outline, start_degrees, percentage, fill_r, fill_g, fill_b, fill_a)
 	local accuracy = accuracy ~= nil and accuracy or 3
@@ -72,6 +78,11 @@ local function draw_circle_3d(x, y, z, radius, r, g, b, a, accuracy, width, outl
 	end
 end
 
+local function flush()
+    routes = {}
+    writefile("routes.json", json.stringify(routes))
+end
+
 local lastupdate
 local offset
 local oldpos
@@ -82,6 +93,7 @@ local function doRoute()
     local me = entity.get_local_player()
     currentPos = {entity.get_origin(me)}
     local currentTick = globals.tickcount()
+    if not entity.is_alive(me) then return end
 
     local map = globals.mapname()
     
@@ -205,14 +217,28 @@ local function doPaint()
     end
 end
 
+ui.set_callback(flush_on_round_end, function()
+    if ui.get(flush_on_round_end) then
+        client.set_event_callback("round_start", flush)
+    else
+        client.unset_event_callback("round_start", flush)
+    end
+end)
+
 ui.set_callback(master, function(self)
-    if ui.get(master) then
+    if ui.get(self) then
         client.set_event_callback("setup_command", doRoute)
         client.set_event_callback("paint", doPaint)
         ui.set_visible(route_interpolation, true)
         ui.set_visible(interpolation_scale, true)
         ui.set_visible(interphelp, true)
         ui.set_visible(interphelp2, true)
+        ui.set_visible(debug, true)
+        ui.set_visible(debug_shape, true)
+        ui.set_visible(points, true)
+        ui.set_visible(draw_all_logged_positions, true)
+        ui.set_visible(flush_on_round_end, true)
+        ui.set_visible(flush_log, true)
     else
         client.unset_event_callback("setup_command", doRoute)
         client.unset_event_callback("paint", doPaint)
@@ -220,5 +246,11 @@ ui.set_callback(master, function(self)
         ui.set_visible(interpolation_scale, false)
         ui.set_visible(interphelp, false)
         ui.set_visible(interphelp2, false)
+        ui.set_visible(debug, false)
+        ui.set_visible(debug_shape, false)
+        ui.set_visible(points, false)
+        ui.set_visible(draw_all_logged_positions, false)
+        ui.set_visible(flush_on_round_end, false)
+        ui.set_visible(flush_log, false)
     end
 end)
