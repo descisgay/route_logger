@@ -1,6 +1,5 @@
 --[[
 to-do:
-    add route logging to json (and route logging in general)
     implement a python script to export a jpg of the map with highlighted routes
     implement death %/win %
     add a way to export the routes to a webhost potentially
