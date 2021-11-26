@@ -11,6 +11,9 @@ if not readfile("routes.json") then
 end
 
 local json = require "json"
+local vector = require "vector"
+local trace = require "gamesense/trace"
+
 local routes = json.parse(readfile("routes.json"))
 
 local master = ui.new_checkbox("LUA", "B", "Log Routes")
@@ -19,6 +22,8 @@ local interpolation_scale = ui.new_slider("LUA", "B", "Interpolation Scale", 1, 
 local interphelp = ui.new_label("LUA", "B", "Tip: If you're lagging decrease")
 local interphelp2 = ui.new_label("LUA", "B", "the interpolation scale.")
 local debug = ui.new_checkbox("LUA", "B", "Debug")
+local debug_shape = ui.new_combobox("LUA", "B", "Debug Shape", {"Circle", "Square"})
+local points = ui.new_slider("LUA", "B", "Points", 1, 4, 1, true)
 
 ui.set_visible(route_interpolation, false)
 ui.set_visible(interpolation_scale, false)
@@ -62,10 +67,11 @@ local function draw_circle_3d(x, y, z, radius, r, g, b, a, accuracy, width, outl
 	end
 end
 
-
 local lastupdate
 local offset
 local oldpos
+local olderpos
+local evenolderpos
 local currentPos
 local function doRoute()
     local me = entity.get_local_player()
@@ -87,6 +93,14 @@ local function doRoute()
         oldpos = currentPos
     end
 
+    if olderpos == nil then
+        olderpos = currentPos
+    end
+
+    if evenolderpos == nil then
+        evenolderpos = currentPos
+    end
+
     if not ui.get(route_interpolation) then
         offset = 10   
     else
@@ -94,7 +108,8 @@ local function doRoute()
     end
 
     if currentTick >= lastupdate + offset then
-        if oldpos[1] ~= currentPos[1] or oldpos[2] ~= currentPos[2] or oldpos[3] ~= currentPos[3] then
+        local velocity = vector(entity.get_prop(me, "m_vecVelocity"))
+        if velocity:length2d() > 2 and (oldpos[1] ~= currentPos[1] or oldpos[2] ~= currentPos[2] or oldpos[3] ~= currentPos[3]) then
             if ui.get(debug) then
                 client.log("Movement detected")
                 client.log("Current Tick: " .. currentTick)
@@ -103,6 +118,8 @@ local function doRoute()
                 client.log("Last update: " .. lastupdate)
             end
             lastupdate = currentTick
+            evenolderpos = olderpos
+            olderpos = oldpos
             oldpos = currentPos
             routes[map].pos = currentPos
             writefile("routes.json", json.stringify(routes))
@@ -115,10 +132,57 @@ local function doPaint()
         if oldpos == nil then
             return
         end
+
+        local local_player = entity.get_local_player()
+        if ui.get(debug_shape) == "Circle" then            
+            if ui.get(points) == 1 then
+                draw_circle_3d(oldpos[1], oldpos[2], oldpos[3], 14, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
+            elseif ui.get(points) == 2 then
+                draw_circle_3d(oldpos[1], oldpos[2], oldpos[3], 14, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
+                draw_circle_3d(olderpos[1], olderpos[2], olderpos[3], 10, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
+                local oldX, oldY = renderer.world_to_screen(oldpos[1], oldpos[2], oldpos[3])
+                local olderX, olderY = renderer.world_to_screen(olderpos[1], olderpos[2], olderpos[3])
+                renderer.line(oldX, oldY, olderX, olderY, 255, 255, 255, 255)
+            elseif ui.get(points) == 3 then
+                draw_circle_3d(oldpos[1], oldpos[2], oldpos[3], 14, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
+                draw_circle_3d(olderpos[1], olderpos[2], olderpos[3], 10, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
+                draw_circle_3d(evenolderpos[1], evenolderpos[2], evenolderpos[3], 6, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
+                local oldX, oldY = renderer.world_to_screen(oldpos[1], oldpos[2], oldpos[3])
+                local olderX, olderY = renderer.world_to_screen(olderpos[1], olderpos[2], olderpos[3])
+                local evenolderposX, evenolderposY = renderer.world_to_screen(evenolderpos[1], evenolderpos[2], evenolderpos[3])
+                renderer.line(oldX, oldY, olderX, olderY, 255, 255, 255, 255)
+                renderer.line(olderX, olderY, evenolderposX, evenolderposY, 255, 255, 255, 255)
+            end
+        else
+            local src = vector(oldpos[1], oldpos[2], oldpos[3])
+            local dest = src - vector(0, 0, 25)
+            local tr = trace.line(src, dest, {skip = local_player, mask = "MASK_SHOT"})
+            local end_pos = tr.end_pos
+            if tr.plane.normal == vector(0,0,0) then
+                tr.plane.normal = vector(0,0,1)
+                end_pos = src
+            end
+            local right, up = tr.plane.normal:vectors()
+            local size = 14
+            local upper_left = end_pos + up * size + right * size
+            local upper_right = end_pos + up * size - right * size
+            local bottom_right = end_pos - up * size - right * size
+            local bottom_left = end_pos - up * size + right * size
+            local x1, y1 = renderer.world_to_screen(upper_left:unpack())
+            local x2, y2 = renderer.world_to_screen(upper_right:unpack())
+            local x3, y3 = renderer.world_to_screen(bottom_right:unpack())
+            local x4, y4 = renderer.world_to_screen(bottom_left:unpack())
+            renderer.line(x1, y1, x2, y2, 255, 255, 255, 255)
+            renderer.line(x2, y2, x3, y3, 255, 255, 255, 255)
+            renderer.line(x3, y3, x4, y4, 255, 255, 255, 255)
+            renderer.line(x4, y4, x1, y1, 255, 255, 255, 255)
+            renderer.triangle(x1, y1, x2, y2, x3, y3, 255, 255, 255, 255*0.1)
+            renderer.triangle(x1, y1, x3, y3, x4, y4, 255, 255, 255, 255*0.1)
+        end
+
         local x1, y1 = renderer.world_to_screen(oldpos[1], oldpos[2], oldpos[3])
-        local x2, y2 = renderer.world_to_screen(currentPos[1], currentPos[2], currentPos[3])
+        local x2, y2 = renderer.world_to_screen(entity.get_origin(local_player))
         renderer.text(x1, y1, 245, 255, 255, 255, "c", nil, "Last Logged Pos")
-        draw_circle_3d(oldpos[1], oldpos[2], oldpos[3], 14, 255, 255, 255, 255, 3, 2, false, 0, 1, 255, 255, 255, 255*0.1)
         renderer.line(x1, y1, x2, y2, 255, 255, 255, 255)
     end
 end
