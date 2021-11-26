@@ -6,6 +6,6 @@
 
 ##Contact:
 
-#####[Ticket](https://github.com/descisgay/route_logger/issues "Ticket") (Making a ticket is the most reliable way to contact either of us regarding this project)
-#####desc: -> [gamesense.pub](https://gamesense.pub/forums/profile.php?id=8103 "desc")
-#####thatvanilla -> [gamesense.pub](https://gamesense.pub/forums/profile.php?id=8412 "thatvanilla")
+[Ticket](https://github.com/descisgay/route_logger/issues "Ticket") (Making a ticket is the most reliable way to contact either of us regarding this project)
+desc: -> [gamesense.pub](https://gamesense.pub/forums/profile.php?id=8103 "desc")
+thatvanilla -> [gamesense.pub](https://gamesense.pub/forums/profile.php?id=8412 "thatvanilla")
