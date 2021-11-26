@@ -23,7 +23,12 @@ local interphelp = ui.new_label("LUA", "B", "Tip: If you're lagging decrease")
 local interphelp2 = ui.new_label("LUA", "B", "the interpolation scale.")
 local debug = ui.new_checkbox("LUA", "B", "Debug")
 local debug_shape = ui.new_combobox("LUA", "B", "Debug Shape", {"Circle", "Square"})
-local points = ui.new_slider("LUA", "B", "Points", 1, 4, 1, true)
+local points = ui.new_slider("LUA", "B", "Points", 1, 3, 1, true)
+local draw_all_logged_positions = ui.new_checkbox("LUA", "B", "Draw All Logged Positions")
+local flush_log = ui.new_button("LUA", "B", "Flush Log", function()
+    routes = {}
+    writefile("routes.json", json.stringify(routes))
+end)
 
 ui.set_visible(route_interpolation, false)
 ui.set_visible(interpolation_scale, false)
@@ -121,7 +126,9 @@ local function doRoute()
             evenolderpos = olderpos
             olderpos = oldpos
             oldpos = currentPos
-            routes[map].pos = currentPos
+            --routes[map].pos = currentPos
+
+            table.insert(routes[map], {currentPos})
             writefile("routes.json", json.stringify(routes))
         end
     end
@@ -132,7 +139,7 @@ local function doPaint()
         if oldpos == nil then
             return
         end
-
+        local map = globals.mapname()
         local local_player = entity.get_local_player()
         if ui.get(debug_shape) == "Circle" then            
             if ui.get(points) == 1 then
@@ -184,6 +191,17 @@ local function doPaint()
         local x2, y2 = renderer.world_to_screen(entity.get_origin(local_player))
         renderer.text(x1, y1, 245, 255, 255, 255, "c", nil, "Last Logged Pos")
         renderer.line(x1, y1, x2, y2, 255, 255, 255, 255)
+
+        if ui.get(draw_all_logged_positions) then
+            for i = 1, table.maxn(routes[map]), 1 do
+                local x, y = renderer.world_to_screen(routes[map][i][1][1], routes[map][i][1][2], routes[map][i][1][3])
+                renderer.circle(x, y, 255, 255, 255, 255, 3, 0, 360)
+                if i <= table.maxn(routes[map]) - 1 then
+                    local x1, y1 = renderer.world_to_screen(routes[map][i+1][1][1], routes[map][i+1][1][2], routes[map][i+1][1][3])
+                    renderer.line(x, y, x1, y1, 255, 255, 255, 255)
+                end
+            end
+        end
     end
 end
 
